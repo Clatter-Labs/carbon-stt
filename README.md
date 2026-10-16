@@ -12,13 +12,13 @@ The canonical OSS project page is [oss.clatterlabs.com/project/carbon](https://o
 
 ## Product definition
 
-Carbon is not a hosted transcription proxy. It is a portable ASR stack that can run in a browser, a developer laptop, a Docker container, or a self-managed CLI server.
+Carbon is not a hosted transcription proxy. It is a portable ASR stack with a Node.js model runtime that can run beside a browser UI, on a developer laptop, in a Docker container, or as a self-managed CLI server.
 
-- **Browser:** WebGPU with fp16 when available, with ONNX WASM/q8 fallback.
+- **Browser UI:** captures or uploads audio and sends it to the local Node.js runtime; it does not load the model.
 - **Server:** FastAPI plus `faster-whisper` today; a Carbon-native inference engine will replace the reference backend when the first owned checkpoint is ready.
 - **CLI:** direct local transcription with language selection and JSON output.
 - **Deployment:** Docker Compose, process managers, reverse proxies, or any server that can run Python.
-- **Privacy:** audio stays inside the selected execution environment. The browser mode does not upload audio to a Carbon backend.
+- **Privacy:** audio stays inside the selected local Node.js or server execution environment.
 - **Languages:** Arabic and English are first-class targets, with a multilingual interface for other widely used languages.
 
 ## Carbon-owned model direction
@@ -40,7 +40,24 @@ npm test
 npm run build
 ```
 
-The browser demo requires a secure context for microphone access; `localhost` is allowed by modern browsers.
+The browser UI requires a secure context for microphone access; `localhost` is allowed by modern browsers. `npm run dev` starts Vite and the Carbon Node runtime together.
+
+## Node.js model runtime
+
+```bash
+npm install
+npm run dev
+```
+
+The Node runtime loads the configured model once and stores model files in `.carbon-cache/`. Change the model or cache location without changing the browser client:
+
+```bash
+CARBON_MODEL=onnx-community/whisper-tiny \
+CARBON_CACHE_DIR=$HOME/.cache/carbon \
+npm run node:start
+```
+
+The browser proxies `/api/transcribe` to the Node runtime on port `8787`. Audio is decoded to mono 16 kHz PCM inside Node using the bundled `ffmpeg-static` binary before inference.
 
 ## Docker API server
 

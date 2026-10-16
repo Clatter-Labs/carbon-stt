@@ -11,7 +11,7 @@ app.innerHTML = `
     <section class="hero">
       <div class="eyebrow"><i></i> LOCAL INFERENCE · NO SERVER REQUIRED</div>
       <h1>Speech becomes<br><em>text.</em></h1>
-      <p class="lede">A lightweight, open-weight speech-to-text runtime for the web. Your audio stays in this browser.</p>
+      <p class="lede">A lightweight speech-to-text runtime for the web. Audio is processed by the local Node.js model server.</p>
       <div class="badges"><span>Node.js runtime</span><span>Local model cache</span><span>MIT ecosystem</span></div>
     </section>
     <section class="workspace">
@@ -24,7 +24,7 @@ app.innerHTML = `
       <div class="status"><span id="status">Ready when you are.</span><span id="timer"></span></div>
       <div class="transcript-wrap"><div class="label">TRANSCRIPT <button id="copy" class="copy" disabled>Copy</button></div><div id="transcript" class="transcript empty">Your transcription will appear here.</div></div>
     </section>
-    <footer><span>Carbon v0.1.0</span><span>Runs locally in your browser · <a href="https://github.com/Clatter-Labs/carbon-stt" target="_blank" rel="noreferrer">GitHub</a></span></footer>
+    <footer><span>Carbon v0.1.0</span><span>Runs locally in Node.js · <a href="https://github.com/Clatter-Labs/carbon-stt" target="_blank" rel="noreferrer">GitHub</a></span></footer>
   </main>`;
 
 const $ = (id) => document.getElementById(id);
