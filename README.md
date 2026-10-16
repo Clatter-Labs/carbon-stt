@@ -130,3 +130,9 @@ Carbon is now organized as a provider-neutral runtime for both speech-to-text an
 - `carbon.config.example.yaml` shows how to attach a custom local TTS or STT command.
 
 Carbon does not bundle a proprietary TTS model in this repository. TTS is an adapter capability: users can attach any compatible open-weight local model, CLI engine, Docker service, or cloud endpoint without changing the Carbon client.
+
+## Microphone permissions
+
+The microphone is requested by the browser UI, not by the Node.js model process. Run Carbon at `http://localhost:5173` or behind HTTPS. Browsers block microphone access on ordinary remote HTTP addresses.
+
+If permission was previously denied, open the browser address-bar site settings, set **Microphone** to **Allow**, reload the page, and press **Record audio** again. Carbon now reports whether the issue is an insecure context, a denied permission, a missing device, or an unsupported browser API.

@@ -56,8 +56,20 @@ $('file').addEventListener('change', async (event) => { const file = event.targe
 $('copy').addEventListener('click', async () => { await navigator.clipboard.writeText($('transcript').textContent); $('copy').textContent = 'Copied'; setTimeout(() => $('copy').textContent = 'Copy', 1200); });
 $('record').addEventListener('click', async () => {
   if (recorder?.state === 'recording') { recorder.stop(); return; }
+  const localContext = ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname);
+  if (!window.isSecureContext && !localContext) {
+    setStatus('Microphone requires HTTPS or localhost. Open http://localhost:5173.');
+    $('engine-label').textContent = 'Secure context required';
+    return;
+  }
+  if (!navigator.mediaDevices?.getUserMedia) {
+    setStatus('This browser does not expose microphone access. Use a current browser on localhost or HTTPS.');
+    $('engine-label').textContent = 'Microphone unavailable';
+    return;
+  }
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    setStatus('Requesting microphone permission…');
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
     chunks = []; recorder = new MediaRecorder(stream); startedAt = Date.now();
     recorder.ondataavailable = (e) => e.data.size && chunks.push(e.data);
     recorder.onstop = async () => { stream.getTracks().forEach((track) => track.stop()); $('record-label').textContent = 'Record audio'; $('record').classList.remove('recording'); clearInterval(window.carbonTimer); $('timer').textContent = ''; await transcribe(new Blob(chunks, { type: recorder.mimeType })); };
@@ -65,7 +77,8 @@ $('record').addEventListener('click', async () => {
     window.carbonTimer = setInterval(() => { $('timer').textContent = `${Math.floor((Date.now() - startedAt) / 1000)}s`; }, 250);
   } catch (error) {
     const detail = error?.message || error?.name || 'unknown error';
-    setStatus(`Microphone unavailable: ${detail}`);
+    const message = error?.name === 'NotAllowedError' ? 'Microphone permission was denied. Allow it in the browser address-bar settings, then retry.' : error?.name === 'NotFoundError' ? 'No microphone was found. Connect a microphone and retry.' : `Microphone unavailable: ${detail}`;
+    setStatus(message);
     console.error('Carbon microphone error:', error);
   }
 });

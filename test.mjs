@@ -9,6 +9,9 @@ test('Carbon browser runtime delegates audio to the Node model server', () => {
   assert.doesNotMatch(source, /pipeline\(/);
   assert.match(source, /value="arabic"/);
   assert.match(source, /value="english"/);
+  assert.match(source, /getUserMedia/);
+  assert.match(source, /Secure context required/);
+  assert.match(source, /NotAllowedError/);
 });
 
 test('Carbon Node runtime owns model loading and model cache', () => {
