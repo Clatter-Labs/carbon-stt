@@ -5,6 +5,7 @@ env.allowLocalModels = false;
 env.useBrowserCache = true;
 
 const MODEL = 'onnx-community/whisper-tiny';
+const TARGET_SAMPLE_RATE = 16000;
 let transcriber = null;
 let recorder = null;
 let chunks = [];
@@ -18,7 +19,7 @@ app.innerHTML = `
       <div class="eyebrow"><i></i> LOCAL INFERENCE · NO SERVER REQUIRED</div>
       <h1>Speech becomes<br><em>text.</em></h1>
       <p class="lede">A lightweight, open-weight speech-to-text runtime for the web. Your audio stays in this browser.</p>
-      <div class="badges"><span>WebGPU accelerated</span><span>Carbon Multilingual ASR</span><span>MIT ecosystem</span></div>
+      <div class="badges"><span>WebGPU accelerated</span><span>Reference ASR backend</span><span>MIT ecosystem</span></div>
     </section>
     <section class="workspace">
       <div class="controls">
@@ -42,23 +43,53 @@ async function getTranscriber() {
   const supportsGPU = Boolean(navigator.gpu);
   $('engine-label').textContent = supportsGPU ? 'Loading WebGPU engine…' : 'Loading WASM engine…';
   setStatus('Downloading the model once — it will be cached locally.');
-  transcriber = await pipeline('automatic-speech-recognition', MODEL, { device: supportsGPU ? 'webgpu' : 'wasm', dtype: supportsGPU ? 'fp16' : 'q8' });
+  try {
+    transcriber = await pipeline('automatic-speech-recognition', MODEL, { device: supportsGPU ? 'webgpu' : 'wasm', dtype: supportsGPU ? 'fp16' : 'q8' });
+  } catch (error) {
+    transcriber = null;
+    throw error;
+  }
   $('engine-label').textContent = supportsGPU ? 'WebGPU active' : 'WASM fallback active';
   return transcriber;
+}
+
+async function decodeToPcm(blob) {
+  const AudioContextClass = globalThis.AudioContext || globalThis.webkitAudioContext;
+  if (!AudioContextClass) throw new Error('This browser does not provide Web Audio decoding.');
+  const context = new AudioContextClass();
+  try {
+    const decoded = await context.decodeAudioData(await blob.arrayBuffer());
+    const frameCount = Math.ceil(decoded.duration * TARGET_SAMPLE_RATE);
+    const offline = new OfflineAudioContext(1, frameCount, TARGET_SAMPLE_RATE);
+    const source = offline.createBufferSource();
+    source.buffer = decoded;
+    source.connect(offline.destination);
+    source.start(0);
+    const rendered = await offline.startRendering();
+    return rendered.getChannelData(0);
+  } finally {
+    await context.close().catch(() => {});
+  }
 }
 
 async function transcribe(blob) {
   try {
     const pipe = await getTranscriber();
+    setStatus('Decoding audio locally…');
+    const audio = await decodeToPcm(blob);
     setStatus('Transcribing locally…');
     const selectedLanguage = $('language').value;
-    const output = await pipe(await blob.arrayBuffer(), { chunk_length_s: 30, stride_length_s: 5, ...(selectedLanguage === 'auto' ? {} : { language: selectedLanguage }), task: 'transcribe' });
+    const options = { chunk_length_s: 30, stride_length_s: 5, task: 'transcribe' };
+    if (selectedLanguage !== 'auto') options.language = selectedLanguage;
+    const output = await pipe(audio, options);
     setTranscript(output.text.trim());
     setStatus('Done. Audio never left this device.');
   } catch (error) {
-    console.error(error);
-    setStatus(`Could not transcribe: ${error.message || 'unknown error'}`);
-    $('engine-label').textContent = 'Engine error';
+    transcriber = null;
+    console.error('Carbon transcription error:', error);
+    const detail = error?.message || error?.name || 'unknown error';
+    setStatus(`Could not transcribe: ${detail}`);
+    $('engine-label').textContent = 'Engine error — retry';
   }
 }
 
@@ -73,5 +104,9 @@ $('record').addEventListener('click', async () => {
     recorder.onstop = async () => { stream.getTracks().forEach((track) => track.stop()); $('record-label').textContent = 'Record audio'; $('record').classList.remove('recording'); clearInterval(window.carbonTimer); $('timer').textContent = ''; await transcribe(new Blob(chunks, { type: recorder.mimeType })); };
     recorder.start(); $('record-label').textContent = 'Stop recording'; $('record').classList.add('recording'); setStatus('Listening… speak clearly.');
     window.carbonTimer = setInterval(() => { $('timer').textContent = `${Math.floor((Date.now() - startedAt) / 1000)}s`; }, 250);
-  } catch (error) { setStatus('Microphone permission was not granted.'); console.error(error); }
+  } catch (error) {
+    const detail = error?.message || error?.name || 'unknown error';
+    setStatus(`Microphone unavailable: ${detail}`);
+    console.error('Carbon microphone error:', error);
+  }
 });
