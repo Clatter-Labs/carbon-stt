@@ -4,7 +4,7 @@ import './style.css';
 env.allowLocalModels = false;
 env.useBrowserCache = true;
 
-const MODEL = 'onnx-community/whisper-tiny.en';
+const MODEL = 'onnx-community/whisper-tiny';
 let transcriber = null;
 let recorder = null;
 let chunks = [];
@@ -18,12 +18,13 @@ app.innerHTML = `
       <div class="eyebrow"><i></i> LOCAL INFERENCE · NO SERVER REQUIRED</div>
       <h1>Speech becomes<br><em>text.</em></h1>
       <p class="lede">A lightweight, open-weight speech-to-text runtime for the web. Your audio stays in this browser.</p>
-      <div class="badges"><span>WebGPU accelerated</span><span>Whisper Tiny EN</span><span>MIT ecosystem</span></div>
+      <div class="badges"><span>WebGPU accelerated</span><span>Whisper Tiny Multilingual</span><span>MIT ecosystem</span></div>
     </section>
     <section class="workspace">
       <div class="controls">
         <button id="record" class="record"><span class="dot"></span><span id="record-label">Record audio</span></button>
         <label class="upload">Upload audio<input id="file" type="file" accept="audio/*,video/*" /></label>
+        <label class="language">Language<select id="language"><option value="auto">Auto-detect</option><option value="arabic">العربية</option><option value="english">English</option><option value="french">Français</option><option value="spanish">Español</option><option value="hindi">हिन्दी</option><option value="portuguese">Português</option><option value="german">Deutsch</option><option value="turkish">Türkçe</option></select></label>
         <div class="engine"><span class="pulse"></span><span id="engine-label">Engine idle</span></div>
       </div>
       <div class="status"><span id="status">Ready when you are.</span><span id="timer"></span></div>
@@ -50,7 +51,8 @@ async function transcribe(blob) {
   try {
     const pipe = await getTranscriber();
     setStatus('Transcribing locally…');
-    const output = await pipe(await blob.arrayBuffer(), { chunk_length_s: 30, stride_length_s: 5, language: 'english', task: 'transcribe' });
+    const selectedLanguage = $('language').value;
+    const output = await pipe(await blob.arrayBuffer(), { chunk_length_s: 30, stride_length_s: 5, ...(selectedLanguage === 'auto' ? {} : { language: selectedLanguage }), task: 'transcribe' });
     setTranscript(output.text.trim());
     setStatus('Done. Audio never left this device.');
   } catch (error) {

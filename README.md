@@ -1,58 +1,73 @@
 # Carbon /STT
 
-**Carbon** is Clatter Labs Software's lightweight speech-to-text runtime for the web. It runs inference locally in the browser, uses WebGPU when available, falls back to WASM, and sends no audio to a backend.
+<p align="center"><img src="assets/carbon-logo.svg" width="96" alt="Carbon logo"></p>
 
-> **Status:** v0.1 is a working browser runtime and reference implementation. It is not a newly trained Carbon checkpoint yet. The default checkpoint is the open-weight `onnx-community/whisper-tiny.en`, exposed behind a small Carbon API so a future Carbon checkpoint can replace it without changing the UI.
+**Carbon** هو runtime خفيف وسريع لتحويل الكلام إلى نص في الويب، من إنشاء **Clatter Labs Software** داخل منظمة **Clatter-Labs**. يعالج الصوت محليًا داخل المتصفح، ويستخدم WebGPU عند توفره مع بديل WASM للأجهزة الأخرى.
 
-## What Carbon is
+> **الحالة:** Carbon v0.1 منتج تشغيل وتجربة يعمل فعليًا. هو مبني من Clatter Labs فوق بنية وأوزان Whisper المفتوحة، وليس ادعاءً بأن Clatter Labs أنشأت نموذج Whisper الأصلي. الخطوة التالية هي تدريب/تقطير checkpoint مستقل باسم Carbon.
 
-Carbon is the product/runtime layer around a small Transformer ASR checkpoint:
+## ما هو Whisper؟
 
-- **Fast path:** WebGPU + fp16 when the browser exposes `navigator.gpu`.
-- **Portable path:** ONNX Runtime WASM + q8 when WebGPU is unavailable.
-- **Private by default:** audio is decoded and transcribed in-browser; only model files are downloaded from Hugging Face on first use and then cached by the browser.
-- **Simple surface:** upload an audio file or record from the microphone, then copy the transcript.
-- **Replaceable weights:** change `MODEL` in `src/main.js` to a compatible Transformers.js/ONNX checkpoint.
+Whisper هو نموذج Transformer للتعرّف التلقائي على الكلام (ASR) والترجمة الكلامية، طورته OpenAI ونشرت كوده وأوزانه بترخيص MIT. هو نموذج encoder-decoder يتلقى الصوت ويولّد tokens تمثل النص. درّبت OpenAI عائلة Whisper على نحو 680 ألف ساعة من بيانات كلام معلمة أو ضعيفة الإشراف، وتضم النماذج متعددة اللغات العربية والإنجليزية ولغات كثيرة أخرى.
 
-The reference model is Whisper Tiny English, approximately 39M parameters. It stays below the project's 30M–1B target ceiling only if we later produce a smaller Carbon checkpoint; the current v0.1 reference is intentionally a practical starting point, not the final Carbon architecture.
+إذًا العلاقة الصحيحة هي:
 
-## Run locally
+- **OpenAI** أنشأت نموذج Whisper الأصلي ووفرت أوزانه.
+- **Clatter Labs Software** أنشأت Carbon كمنتج/runtime مستقل للويب، ودمجت أوزانًا متوافقة، وصممت تجربة التشغيل والواجهة، وتملك مسار تطوير Carbon الخاص بها.
+- **Carbon checkpoint الأصلي** سيأتي لاحقًا بعد اختيار بيانات مرخصة وتدريب أو distillation وتقييم مستقل.
+
+## اللغات
+
+الإصدار الحالي يستخدم `onnx-community/whisper-tiny` متعدد اللغات، وليس النسخة الإنجليزية فقط. الواجهة تتيح الكشف التلقائي عن اللغة، والعربية، والإنجليزية، والفرنسية، والإسبانية، والهندية، والبرتغالية، والألمانية، والتركية.
+
+كما أن Whisper متعدد اللغات يغطي لغات أخرى، لكن الدقة ليست متساوية بينها؛ تعتمد على كمية وجودة البيانات المتاحة لكل لغة، واللهجة، وضوضاء التسجيل. العربية والإنجليزية مدعومتان في Carbon من خلال checkpoint متعدد اللغات، مع إمكانية تثبيت اللغة يدويًا لتحسين النتيجة عندما تكون معروفة.
+
+## كيف يعمل Carbon؟
+
+- **مسار سريع:** WebGPU مع fp16 عندما يوفّر المتصفح `navigator.gpu`.
+- **مسار محمول:** ONNX Runtime WASM مع q8 عندما لا يتوفر WebGPU.
+- **خصوصية افتراضية:** الصوت لا يذهب إلى backend؛ يتم تحميل ملفات النموذج من Hugging Face عند أول استخدام ثم تخزينها في browser cache.
+- **واجهة بسيطة:** تسجيل من الميكروفون أو رفع ملف صوتي/فيديو ثم نسخ النص.
+- **أوزان قابلة للاستبدال:** يمكن استبدال معرف النموذج في `src/main.js` بـ Carbon checkpoint متوافق مستقبلًا.
+
+## التشغيل محليًا
 
 ```bash
 npm install
 npm run dev
 ```
 
-Open the local URL printed by Vite. Microphone capture requires a secure context (`localhost` is allowed) and browser permission.
+افتح الرابط الذي يعرضه Vite. تسجيل الميكروفون يحتاج إلى secure context؛ `localhost` مسموح به من المتصفحات.
 
 ```bash
 npm test
 npm run build
 ```
 
-## Model and licensing
+## الترخيص والمصادر
 
-Carbon's wrapper is MIT licensed by Clatter Labs Software. The default Whisper weights and upstream code are released under MIT by OpenAI; the ONNX conversion is provided by the `onnx-community/whisper-tiny.en` model repository. Review the upstream model card and checkpoint terms before redistributing weights in a product.
+كود Carbon والواجهة في هذا المستودع مرخصان MIT من Clatter Labs Software. أوزان Whisper الأصلية والكود upstream مرخصان MIT من OpenAI. تحويل ONNX المستخدم في المتصفح منشور في مستودع `onnx-community/whisper-tiny`. راجع شروط المستودعات الأصلية قبل إعادة توزيع الأوزان في منتج تجاري.
 
 - [Transformers.js](https://huggingface.co/docs/transformers.js/en/index)
-- [Transformers.js v3 WebGPU ASR example](https://github.com/huggingface/blog/blob/main/transformersjs-v3.md)
+- [Transformers.js WebGPU ASR example](https://github.com/huggingface/blog/blob/main/transformersjs-v3.md)
 - [OpenAI Whisper repository](https://github.com/openai/whisper)
-- [Whisper Tiny model card](https://huggingface.co/openai/whisper-tiny)
+- [Whisper model card](https://huggingface.co/openai/whisper-tiny)
 - [Browser reference project](https://github.com/xenova/whisper-web)
 
-## Roadmap to a real Carbon checkpoint
+## خارطة الطريق إلى Carbon checkpoint مستقل
 
-1. Define target languages, streaming latency, acceptable WER, and supported devices.
-2. Benchmark `tiny.en`, `tiny`, `base.en`, and smaller student/distilled candidates on representative audio.
-3. Select a legally distributable training corpus with consent and language coverage.
-4. Distill or fine-tune a sub-30M student model; keep evaluation data and WER reports in-repo.
-5. Export to ONNX, quantize q8/q4, validate WebGPU and WASM parity, and publish the checkpoint separately on Hugging Face.
-6. Point `MODEL` to the Carbon checkpoint and record exact commit hashes in a release manifest.
+1. تثبيت اللغات المستهدفة، latency، وWER المطلوب على أجهزة الويب.
+2. بناء benchmark عربي/إنجليزي متوازن مع تسجيلات ولهجات وضوضاء واقعية.
+3. اختيار corpus مرخص وقابل لإعادة التوزيع، مع موافقة المتحدثين عند الحاجة.
+4. إجراء distillation أو fine-tuning لنموذج طالب أقل من 30M parameter بدل تدريب نموذج ضخم.
+5. تصدير checkpoint إلى ONNX، ثم quantization إلى q8/q4، واختبار WebGPU/WASM.
+6. نشر `Clatter-Labs/carbon-model` أو مستودع أوزان منفصل مع model card وWER وcommit hashes.
+7. تغيير `MODEL` إلى Carbon checkpoint مع إبقاء واجهة Carbon نفسها.
 
-## Important limitations
+## حدود مهمة
 
-This demo is not a safety-critical transcription system. Whisper-family models can hallucinate, vary by language/accent, and are not a substitute for human review in legal, medical, employment, or other high-impact settings. Do not transcribe people without consent.
+هذا الإصدار ليس نظامًا مناسبًا لاتخاذ قرارات طبية أو قانونية أو وظيفية دون مراجعة بشرية. نماذج Whisper قد تخطئ أو تهلوس أو تختلف دقتها حسب اللغة واللهجة وجودة التسجيل. لا تسجل أو تفرغ كلام الأشخاص دون موافقتهم.
 
-## Organization
+## المنظمة
 
-Maintained by **Clatter Labs Software** in the **Clatter-Labs** GitHub organization. This project is not affiliated with OpenAI or Hugging Face.
+Maintained by **Clatter Labs Software** داخل منظمة **Clatter-Labs** على GitHub. Carbon ليس منتجًا رسميًا تابعًا لـ OpenAI أو Hugging Face؛ هو مشروع Clatter Labs مبني على تقنيات وأوزان مفتوحة مع نسبها إلى أصحابها.
