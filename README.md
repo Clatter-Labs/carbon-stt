@@ -6,6 +6,10 @@
 
 > **Status:** Carbon v0.2 contains a working browser runtime, a local CLI, and a Docker API server. The public reference runtime can execute a multilingual open checkpoint today. The owned Carbon architecture and training program are specified in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md); the first Carbon-trained checkpoint will be published only after reproducible evaluation.
 
+## Official OSS project page
+
+The canonical OSS project page is [oss.clatterlabs.com/project/carbon](https://oss.clatterlabs.com/project/carbon). It records Carbon as a Clatter Labs MIT library in beta and tracks the owned model architecture, language targets, deployment goals, and release roadmap.
+
 ## Product definition
 
 Carbon is not a hosted transcription proxy. It is a portable ASR stack that can run in a browser, a developer laptop, a Docker container, or a self-managed CLI server.
