@@ -4,6 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import ffmpegStatic from 'ffmpeg-static';
 import { pipeline, env } from '@huggingface/transformers';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -35,13 +36,17 @@ function readBody(request, limit = 100 * 1024 * 1024) {
 
 function decodeWithFfmpeg(inputPath) {
   return new Promise((resolve, reject) => {
-    const ffmpeg = spawn(process.env.FFMPEG_PATH || 'ffmpeg', ['-hide_banner', '-loglevel', 'error', '-i', inputPath, '-f', 'f32le', '-ac', '1', '-ar', '16000', 'pipe:1']);
+    const ffmpeg = spawn(process.env.FFMPEG_PATH || ffmpegStatic || 'ffmpeg', ['-hide_banner', '-loglevel', 'error', '-i', inputPath, '-f', 'f32le', '-ac', '1', '-ar', '16000', 'pipe:1']);
     const chunks = [];
     let stderr = '';
     ffmpeg.stdout.on('data', (chunk) => chunks.push(chunk));
     ffmpeg.stderr.on('data', (chunk) => { stderr += chunk.toString(); });
     ffmpeg.on('error', reject);
-    ffmpeg.on('close', (code) => code === 0 ? resolve(new Float32Array(Buffer.concat(chunks).buffer, Buffer.concat(chunks).byteOffset, Math.floor(Buffer.concat(chunks).byteLength / 4))) : reject(new Error(stderr || `ffmpeg exited with ${code}`)));
+    ffmpeg.on('close', (code) => {
+      if (code !== 0) { reject(new Error(stderr || `ffmpeg exited with ${code}`)); return; }
+      const buffer = Buffer.concat(chunks);
+      resolve(new Float32Array(buffer.buffer, buffer.byteOffset, Math.floor(buffer.byteLength / 4)));
+    });
   });
 }
 
