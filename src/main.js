@@ -1,12 +1,5 @@
-import { pipeline, env } from '@huggingface/transformers';
 import './style.css';
 
-env.allowLocalModels = false;
-env.useBrowserCache = true;
-
-const MODEL = 'onnx-community/whisper-tiny';
-const TARGET_SAMPLE_RATE = 16000;
-let transcriber = null;
 let recorder = null;
 let chunks = [];
 let startedAt = 0;
@@ -19,7 +12,7 @@ app.innerHTML = `
       <div class="eyebrow"><i></i> LOCAL INFERENCE · NO SERVER REQUIRED</div>
       <h1>Speech becomes<br><em>text.</em></h1>
       <p class="lede">A lightweight, open-weight speech-to-text runtime for the web. Your audio stays in this browser.</p>
-      <div class="badges"><span>WebGPU accelerated</span><span>Reference ASR backend</span><span>MIT ecosystem</span></div>
+      <div class="badges"><span>Node.js runtime</span><span>Local model cache</span><span>MIT ecosystem</span></div>
     </section>
     <section class="workspace">
       <div class="controls">
@@ -38,58 +31,24 @@ const $ = (id) => document.getElementById(id);
 const setStatus = (text) => { $('status').textContent = text; };
 const setTranscript = (text) => { const el = $('transcript'); el.textContent = text || 'No speech detected.'; el.classList.toggle('empty', !text); $('copy').disabled = !text; };
 
-async function getTranscriber() {
-  if (transcriber) return transcriber;
-  const supportsGPU = Boolean(navigator.gpu);
-  $('engine-label').textContent = supportsGPU ? 'Loading WebGPU engine…' : 'Loading WASM engine…';
-  setStatus('Downloading the model once — it will be cached locally.');
-  try {
-    transcriber = await pipeline('automatic-speech-recognition', MODEL, { device: supportsGPU ? 'webgpu' : 'wasm', dtype: supportsGPU ? 'fp16' : 'q8' });
-  } catch (error) {
-    transcriber = null;
-    throw error;
-  }
-  $('engine-label').textContent = supportsGPU ? 'WebGPU active' : 'WASM fallback active';
-  return transcriber;
-}
-
-async function decodeToPcm(blob) {
-  const AudioContextClass = globalThis.AudioContext || globalThis.webkitAudioContext;
-  if (!AudioContextClass) throw new Error('This browser does not provide Web Audio decoding.');
-  const context = new AudioContextClass();
-  try {
-    const decoded = await context.decodeAudioData(await blob.arrayBuffer());
-    const frameCount = Math.ceil(decoded.duration * TARGET_SAMPLE_RATE);
-    const offline = new OfflineAudioContext(1, frameCount, TARGET_SAMPLE_RATE);
-    const source = offline.createBufferSource();
-    source.buffer = decoded;
-    source.connect(offline.destination);
-    source.start(0);
-    const rendered = await offline.startRendering();
-    return rendered.getChannelData(0);
-  } finally {
-    await context.close().catch(() => {});
-  }
-}
-
 async function transcribe(blob) {
   try {
-    const pipe = await getTranscriber();
-    setStatus('Decoding audio locally…');
-    const audio = await decodeToPcm(blob);
-    setStatus('Transcribing locally…');
+    setStatus('Sending audio to the local Node.js runtime…');
+    $('engine-label').textContent = 'Node.js model server';
     const selectedLanguage = $('language').value;
-    const options = { chunk_length_s: 30, stride_length_s: 5, task: 'transcribe' };
-    if (selectedLanguage !== 'auto') options.language = selectedLanguage;
-    const output = await pipe(audio, options);
-    setTranscript(output.text.trim());
-    setStatus('Done. Audio never left this device.');
+    const response = await fetch('/api/transcribe', {
+      method: 'POST',
+      headers: { 'Content-Type': blob.type || 'application/octet-stream', 'X-Carbon-Language': selectedLanguage },
+      body: blob,
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || `Node runtime returned ${response.status}`);
+    setTranscript(result.text?.trim());
+    setStatus('Done. Audio stayed inside the local Node.js runtime.');
   } catch (error) {
-    transcriber = null;
-    console.error('Carbon transcription error:', error);
-    const detail = error?.message || error?.name || 'unknown error';
-    setStatus(`Could not transcribe: ${detail}`);
-    $('engine-label').textContent = 'Engine error — retry';
+    console.error('Carbon Node transcription error:', error);
+    setStatus(`Could not transcribe: ${error?.message || 'unknown error'}`);
+    $('engine-label').textContent = 'Node engine error — retry';
   }
 }
 
