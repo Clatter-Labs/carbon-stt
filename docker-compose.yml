@@ -1,0 +1,15 @@
+services:
+  carbon:
+    build: .
+    image: clatterlabs/carbon-stt:latest
+    ports:
+      - "${CARBON_PORT:-8000}:8000"
+    environment:
+      CARBON_MODEL: ${CARBON_MODEL:-tiny}
+      CARBON_DEVICE: ${CARBON_DEVICE:-cpu}
+      CARBON_COMPUTE_TYPE: ${CARBON_COMPUTE_TYPE:-int8}
+    restart: unless-stopped
+    volumes:
+      - carbon-model-cache:/root/.cache
+volumes:
+  carbon-model-cache:

@@ -71,3 +71,44 @@ npm run build
 ## المنظمة
 
 Maintained by **Clatter Labs Software** داخل منظمة **Clatter-Labs** على GitHub. Carbon ليس منتجًا رسميًا تابعًا لـ OpenAI أو Hugging Face؛ هو مشروع Clatter Labs مبني على تقنيات وأوزان مفتوحة مع نسبها إلى أصحابها.
+
+## الاستضافة المحلية والخوادم
+
+يوفر Carbon الآن خادمًا محليًا متوافقًا مع نمط OpenAI للتفريغ الصوتي، لذلك يمكن تشغيله على Docker أو على أي بيئة CLI تشغّل Python. لا يحتاج المتصفح إلى الوصول إلى Ollama أو LM Studio مباشرة؛ يمكنه استدعاء Carbon API الخاص بنا.
+
+### Docker
+
+```bash
+./deploy/carbonctl.sh up
+./deploy/carbonctl.sh health
+curl -X POST http://localhost:8000/v1/audio/transcriptions \\
+  -F file=@sample.wav \\
+  -F language=ar
+```
+
+يستخدم الخادم `faster-whisper` مع نموذج Whisper متعدد اللغات، ويحفظ cache النموذج في volume دائم. الإعداد الافتراضي CPU/int8؛ للسيرفر الذي يملك CUDA يمكن ضبط `CARBON_DEVICE=cuda` و`CARBON_COMPUTE_TYPE=float16` بعد استخدام صورة CUDA مناسبة.
+
+### CLI مباشر
+
+```bash
+python -m venv .venv
+. .venv/bin/activate
+pip install -r server/requirements.txt
+python -m server.cli recording.wav --language ar
+python -m server.cli recording.wav --language en --json
+```
+
+### Ollama وLM Studio
+
+Ollama وLM Studio مفيدان كطبقة **LLM نصية اختيارية** بعد التفريغ: يرسل Carbon النص الناتج إليهما للتلخيص أو التنظيف أو استخراج البيانات. لا نعلن أنهما بديلان أصليان لخادم ASR؛ توثيق LM Studio يركز على chat/responses/embeddings، بينما خادم Carbon هو المسؤول عن audio transcription. يمكن تشغيل Ollama أو LM Studio بجانب Carbon عند الحاجة، مع إبقاء الصوت داخل بيئة المستخدم.
+
+### أي CLI server
+
+العقد الثابت هو endpoint التالي:
+
+```text
+POST /v1/audio/transcriptions
+multipart/form-data: file, language?, prompt?, response_format?
+```
+
+بهذا يمكن وضع Carbon خلف Nginx أو Caddy أو systemd أو Kubernetes أو أي process manager، من دون ربط الواجهة بمزود واحد.
