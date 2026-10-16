@@ -24,7 +24,7 @@ app.innerHTML = `
       <div class="controls">
         <button id="record" class="record"><span class="dot"></span><span id="record-label">Record audio</span></button>
         <label class="upload">Upload audio<input id="file" type="file" accept="audio/*,video/*" /></label>
-        <label class="language">Language<select id="language"><option value="auto">Auto-detect</option><option value="arabic">العربية</option><option value="english">English</option><option value="french">Français</option><option value="spanish">Español</option><option value="hindi">हिन्दी</option><option value="portuguese">Português</option><option value="german">Deutsch</option><option value="turkish">Türkçe</option></select></label>
+        <label class="language">Language<select id="language"><option value="auto">Auto-detect</option><option value="arabic">العربية</option><option value="english">English</option><option value="french">Français</option><option value="spanish">Español</option><option value="portuguese">Português</option><option value="bengali">বাংলা</option><option value="hindi">हिन्दी</option><option value="urdu">اردو</option><option value="chinese">中文</option><option value="japanese">日本語</option><option value="korean">한국어</option><option value="russian">Русский</option><option value="indonesian">Bahasa Indonesia</option><option value="german">Deutsch</option><option value="turkish">Türkçe</option><option value="italian">Italiano</option></select></label>
         <div class="engine"><span class="pulse"></span><span id="engine-label">Engine idle</span></div>
       </div>
       <div class="status"><span id="status">Ready when you are.</span><span id="timer"></span></div>
