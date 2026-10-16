@@ -18,7 +18,7 @@ app.innerHTML = `
       <div class="eyebrow"><i></i> LOCAL INFERENCE · NO SERVER REQUIRED</div>
       <h1>Speech becomes<br><em>text.</em></h1>
       <p class="lede">A lightweight, open-weight speech-to-text runtime for the web. Your audio stays in this browser.</p>
-      <div class="badges"><span>WebGPU accelerated</span><span>Whisper Tiny Multilingual</span><span>MIT ecosystem</span></div>
+      <div class="badges"><span>WebGPU accelerated</span><span>Carbon Multilingual ASR</span><span>MIT ecosystem</span></div>
     </section>
     <section class="workspace">
       <div class="controls">

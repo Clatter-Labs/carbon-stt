@@ -2,93 +2,62 @@
 
 <p align="center"><img src="assets/carbon-logo.svg" width="96" alt="Carbon logo"></p>
 
-**Carbon** هو runtime خفيف وسريع لتحويل الكلام إلى نص في الويب، من إنشاء **Clatter Labs Software** داخل منظمة **Clatter-Labs**. يعالج الصوت محليًا داخل المتصفح، ويستخدم WebGPU عند توفره مع بديل WASM للأجهزة الأخرى.
+**Carbon** is Clatter Labs Software's fast, private speech-to-text platform for the web and local servers. It is developed and maintained inside the **Clatter-Labs** GitHub organization.
 
-> **الحالة:** Carbon v0.1 منتج تشغيل وتجربة يعمل فعليًا. هو مبني من Clatter Labs فوق بنية وأوزان Whisper المفتوحة، وليس ادعاءً بأن Clatter Labs أنشأت نموذج Whisper الأصلي. الخطوة التالية هي تدريب/تقطير checkpoint مستقل باسم Carbon.
+> **Status:** Carbon v0.2 contains a working browser runtime, a local CLI, and a Docker API server. The public reference runtime can execute a multilingual open checkpoint today. The owned Carbon architecture and training program are specified in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md); the first Carbon-trained checkpoint will be published only after reproducible evaluation.
 
-## ما هو Whisper؟
+## Product definition
 
-Whisper هو نموذج Transformer للتعرّف التلقائي على الكلام (ASR) والترجمة الكلامية، طورته OpenAI ونشرت كوده وأوزانه بترخيص MIT. هو نموذج encoder-decoder يتلقى الصوت ويولّد tokens تمثل النص. درّبت OpenAI عائلة Whisper على نحو 680 ألف ساعة من بيانات كلام معلمة أو ضعيفة الإشراف، وتضم النماذج متعددة اللغات العربية والإنجليزية ولغات كثيرة أخرى.
+Carbon is not a hosted transcription proxy. It is a portable ASR stack that can run in a browser, a developer laptop, a Docker container, or a self-managed CLI server.
 
-إذًا العلاقة الصحيحة هي:
+- **Browser:** WebGPU with fp16 when available, with ONNX WASM/q8 fallback.
+- **Server:** FastAPI plus `faster-whisper` today; a Carbon-native inference engine will replace the reference backend when the first owned checkpoint is ready.
+- **CLI:** direct local transcription with language selection and JSON output.
+- **Deployment:** Docker Compose, process managers, reverse proxies, or any server that can run Python.
+- **Privacy:** audio stays inside the selected execution environment. The browser mode does not upload audio to a Carbon backend.
+- **Languages:** Arabic and English are first-class targets, with a multilingual interface for other widely used languages.
 
-- **OpenAI** أنشأت نموذج Whisper الأصلي ووفرت أوزانه.
-- **Clatter Labs Software** أنشأت Carbon كمنتج/runtime مستقل للويب، ودمجت أوزانًا متوافقة، وصممت تجربة التشغيل والواجهة، وتملك مسار تطوير Carbon الخاص بها.
-- **Carbon checkpoint الأصلي** سيأتي لاحقًا بعد اختيار بيانات مرخصة وتدريب أو distillation وتقييم مستقل.
+## Carbon-owned model direction
 
-## اللغات
+The Carbon model is intended to be an original Clatter Labs checkpoint, trained and evaluated by Clatter Labs. It will use a compact streaming acoustic encoder, residual time-channel blocks, multilingual subword outputs, and a CTC-compatible decoding path. The architecture is designed for predictable latency and efficient export to ONNX/WebGPU rather than for large parameter counts.
 
-الإصدار الحالي يستخدم `onnx-community/whisper-tiny` متعدد اللغات، وليس النسخة الإنجليزية فقط. الواجهة تتيح الكشف التلقائي عن اللغة، والعربية، والإنجليزية، والفرنسية، والإسبانية، والهندية، والبرتغالية، والألمانية، والتركية.
+The current browser reference checkpoint is a compatibility backend, not the final Carbon model. Keeping that distinction explicit prevents us from claiming training work that has not happened yet. The `MODEL` constant in `src/main.js` is the replacement point for the first Carbon checkpoint.
 
-كما أن Whisper متعدد اللغات يغطي لغات أخرى، لكن الدقة ليست متساوية بينها؛ تعتمد على كمية وجودة البيانات المتاحة لكل لغة، واللهجة، وضوضاء التسجيل. العربية والإنجليزية مدعومتان في Carbon من خلال checkpoint متعدد اللغات، مع إمكانية تثبيت اللغة يدويًا لتحسين النتيجة عندما تكون معروفة.
+## Supported languages
 
-## كيف يعمل Carbon؟
+The UI provides automatic detection and explicit selection for Arabic, English, French, Spanish, Portuguese, Bengali, Hindi, Urdu, Chinese, Japanese, Korean, Russian, Indonesian, German, Turkish, and Italian. The model family can cover additional languages, but accuracy depends on data coverage, dialect, microphone quality, and background noise. Carbon's evaluation plan will report WER/CER separately for Arabic varieties and English accents instead of hiding them in one aggregate score.
 
-- **مسار سريع:** WebGPU مع fp16 عندما يوفّر المتصفح `navigator.gpu`.
-- **مسار محمول:** ONNX Runtime WASM مع q8 عندما لا يتوفر WebGPU.
-- **خصوصية افتراضية:** الصوت لا يذهب إلى backend؛ يتم تحميل ملفات النموذج من Hugging Face عند أول استخدام ثم تخزينها في browser cache.
-- **واجهة بسيطة:** تسجيل من الميكروفون أو رفع ملف صوتي/فيديو ثم نسخ النص.
-- **أوزان قابلة للاستبدال:** يمكن استبدال معرف النموذج في `src/main.js` بـ Carbon checkpoint متوافق مستقبلًا.
-
-## التشغيل محليًا
+## Local development
 
 ```bash
 npm install
 npm run dev
-```
-
-افتح الرابط الذي يعرضه Vite. تسجيل الميكروفون يحتاج إلى secure context؛ `localhost` مسموح به من المتصفحات.
-
-```bash
 npm test
 npm run build
 ```
 
-## الترخيص والمصادر
+The browser demo requires a secure context for microphone access; `localhost` is allowed by modern browsers.
 
-كود Carbon والواجهة في هذا المستودع مرخصان MIT من Clatter Labs Software. أوزان Whisper الأصلية والكود upstream مرخصان MIT من OpenAI. تحويل ONNX المستخدم في المتصفح منشور في مستودع `onnx-community/whisper-tiny`. راجع شروط المستودعات الأصلية قبل إعادة توزيع الأوزان في منتج تجاري.
-
-- [Transformers.js](https://huggingface.co/docs/transformers.js/en/index)
-- [Transformers.js WebGPU ASR example](https://github.com/huggingface/blog/blob/main/transformersjs-v3.md)
-- [OpenAI Whisper repository](https://github.com/openai/whisper)
-- [Whisper model card](https://huggingface.co/openai/whisper-tiny)
-- [Browser reference project](https://github.com/xenova/whisper-web)
-
-## خارطة الطريق إلى Carbon checkpoint مستقل
-
-1. تثبيت اللغات المستهدفة، latency، وWER المطلوب على أجهزة الويب.
-2. بناء benchmark عربي/إنجليزي متوازن مع تسجيلات ولهجات وضوضاء واقعية.
-3. اختيار corpus مرخص وقابل لإعادة التوزيع، مع موافقة المتحدثين عند الحاجة.
-4. إجراء distillation أو fine-tuning لنموذج طالب أقل من 30M parameter بدل تدريب نموذج ضخم.
-5. تصدير checkpoint إلى ONNX، ثم quantization إلى q8/q4، واختبار WebGPU/WASM.
-6. نشر `Clatter-Labs/carbon-model` أو مستودع أوزان منفصل مع model card وWER وcommit hashes.
-7. تغيير `MODEL` إلى Carbon checkpoint مع إبقاء واجهة Carbon نفسها.
-
-## حدود مهمة
-
-هذا الإصدار ليس نظامًا مناسبًا لاتخاذ قرارات طبية أو قانونية أو وظيفية دون مراجعة بشرية. نماذج Whisper قد تخطئ أو تهلوس أو تختلف دقتها حسب اللغة واللهجة وجودة التسجيل. لا تسجل أو تفرغ كلام الأشخاص دون موافقتهم.
-
-## المنظمة
-
-Maintained by **Clatter Labs Software** داخل منظمة **Clatter-Labs** على GitHub. Carbon ليس منتجًا رسميًا تابعًا لـ OpenAI أو Hugging Face؛ هو مشروع Clatter Labs مبني على تقنيات وأوزان مفتوحة مع نسبها إلى أصحابها.
-
-## الاستضافة المحلية والخوادم
-
-يوفر Carbon الآن خادمًا محليًا متوافقًا مع نمط OpenAI للتفريغ الصوتي، لذلك يمكن تشغيله على Docker أو على أي بيئة CLI تشغّل Python. لا يحتاج المتصفح إلى الوصول إلى Ollama أو LM Studio مباشرة؛ يمكنه استدعاء Carbon API الخاص بنا.
-
-### Docker
+## Docker API server
 
 ```bash
 ./deploy/carbonctl.sh up
 ./deploy/carbonctl.sh health
-curl -X POST http://localhost:8000/v1/audio/transcriptions \\
-  -F file=@sample.wav \\
+curl -X POST http://localhost:8000/v1/audio/transcriptions \
+  -F file=@sample.wav \
   -F language=ar
 ```
 
-يستخدم الخادم `faster-whisper` مع نموذج Whisper متعدد اللغات، ويحفظ cache النموذج في volume دائم. الإعداد الافتراضي CPU/int8؛ للسيرفر الذي يملك CUDA يمكن ضبط `CARBON_DEVICE=cuda` و`CARBON_COMPUTE_TYPE=float16` بعد استخدام صورة CUDA مناسبة.
+The server exposes an portable transcription contract without requiring a cloud provider:
 
-### CLI مباشر
+```text
+POST /v1/audio/transcriptions
+multipart/form-data: file, language?, prompt?, response_format?
+```
+
+The default container uses CPU/int8 and caches model files in a persistent Docker volume. On a CUDA host, configure `CARBON_DEVICE=cuda` and `CARBON_COMPUTE_TYPE=float16` with a CUDA-compatible image.
+
+## Direct CLI
 
 ```bash
 python -m venv .venv
@@ -98,17 +67,33 @@ python -m server.cli recording.wav --language ar
 python -m server.cli recording.wav --language en --json
 ```
 
-### Ollama وLM Studio
+## Ollama, LM Studio, and other local servers
 
-Ollama وLM Studio مفيدان كطبقة **LLM نصية اختيارية** بعد التفريغ: يرسل Carbon النص الناتج إليهما للتلخيص أو التنظيف أو استخراج البيانات. لا نعلن أنهما بديلان أصليان لخادم ASR؛ توثيق LM Studio يركز على chat/responses/embeddings، بينما خادم Carbon هو المسؤول عن audio transcription. يمكن تشغيل Ollama أو LM Studio بجانب Carbon عند الحاجة، مع إبقاء الصوت داخل بيئة المستخدم.
+Carbon owns the audio-to-text boundary. Ollama and LM Studio can be run beside Carbon as optional text-processing services for cleanup, summaries, extraction, or assistant workflows. Carbon does not pretend that a general text-generation endpoint is an audio transcription engine.
 
-### أي CLI server
+The stable boundary is Carbon's `/v1/audio/transcriptions` endpoint. This makes Carbon deployable behind Docker Compose, Nginx, Caddy, systemd, Kubernetes, or any CLI process manager. The output can then be forwarded to any local text model server without coupling the ASR engine to one vendor.
 
-العقد الثابت هو endpoint التالي:
+## Repository layout
 
 ```text
-POST /v1/audio/transcriptions
-multipart/form-data: file, language?, prompt?, response_format?
+src/                 Browser runtime and UI
+assets/              Carbon logo and static assets
+server/app.py        HTTP transcription API
+server/cli.py        Local command-line transcription
+deploy/carbonctl.sh  Docker lifecycle helper
+docker-compose.yml   Portable local deployment
+Dockerfile           Reproducible API image
+docs/ARCHITECTURE.md Carbon-owned model specification
 ```
 
-بهذا يمكن وضع Carbon خلف Nginx أو Caddy أو systemd أو Kubernetes أو أي process manager، من دون ربط الواجهة بمزود واحد.
+## License and model provenance
+
+The Carbon application code and deployment glue in this repository are MIT licensed by Clatter Labs Software. The reference checkpoint is a third-party compatibility artifact and is not presented as a Carbon-trained model. Its original model card and license must be reviewed before redistribution. Carbon-trained weights will ship with a separate model card, dataset statement, evaluation report, and exact release hash.
+
+## Limitations
+
+Carbon is not a safety-critical transcription system. Outputs can contain recognition errors or hallucinations and must be reviewed in medical, legal, employment, accessibility, or other high-impact workflows. Do not record or transcribe people without consent.
+
+## Organization
+
+Maintained by **Clatter Labs Software** in the **Clatter-Labs** GitHub organization. Carbon is an independent Clatter Labs project with its own runtime, deployment surface, evaluation plan, and future checkpoint.
