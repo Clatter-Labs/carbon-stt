@@ -97,3 +97,15 @@ Carbon is not a safety-critical transcription system. Outputs can contain recogn
 ## Organization
 
 Maintained by **Clatter Labs Software** in the **Clatter-Labs** GitHub organization. Carbon is an independent Clatter Labs project with its own runtime, deployment surface, evaluation plan, and future checkpoint.
+
+## Provider-neutral speech library
+
+Carbon is now organized as a provider-neutral runtime for both speech-to-text and optional text-to-speech. The public API stays stable while the implementation can be an in-process model, a local CLI, a Docker sidecar, a local desktop runtime, or a cloud endpoint.
+
+- `POST /v1/audio/transcriptions` is the STT contract.
+- `POST /v1/audio/speech` is the optional TTS contract for a configured provider.
+- `GET /v1/models` reports loaded provider, modality, languages, streaming support, and device.
+- `server/providers.py` defines the small adapter surface.
+- `carbon.config.example.yaml` shows how to attach a custom local TTS or STT command.
+
+Carbon does not bundle a proprietary TTS model in this repository. TTS is an adapter capability: users can attach any compatible open-weight local model, CLI engine, Docker service, or cloud endpoint without changing the Carbon client.

@@ -5,6 +5,7 @@ from typing import Annotated
 
 from fastapi import FastAPI, File, Form, UploadFile
 from faster_whisper import WhisperModel
+from server.model_registry import as_dicts
 
 MODEL_SIZE = os.getenv("CARBON_MODEL", "tiny")
 DEVICE = os.getenv("CARBON_DEVICE", "cpu")
@@ -12,6 +13,10 @@ COMPUTE_TYPE = os.getenv("CARBON_COMPUTE_TYPE", "int8" if DEVICE == "cpu" else "
 
 app = FastAPI(title="Carbon STT Server", version="0.2.0")
 model = WhisperModel(MODEL_SIZE, device=DEVICE, compute_type=COMPUTE_TYPE)
+
+@app.get("/v1/models")
+def models():
+    return {"data": as_dicts()}
 
 @app.get("/health")
 def health():

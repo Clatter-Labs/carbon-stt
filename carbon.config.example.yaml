@@ -1,0 +1,22 @@
+# Carbon provider configuration. Copy to carbon.config.yaml and adapt commands.
+# The HTTP API remains stable when providers change.
+
+stt:
+  provider: faster-whisper
+  model: tiny
+  language: auto
+  device: cpu
+  compute_type: int8
+
+# Optional TTS provider. The command receives:
+#   CARBON_TEXT, CARBON_OUTPUT, CARBON_VOICE, CARBON_LANGUAGE
+# It must create the output audio file at CARBON_OUTPUT.
+tts:
+  provider: command
+  command: ["my-local-tts", "--text", "${CARBON_TEXT}", "--output", "${CARBON_OUTPUT}"]
+
+# Optional text post-processing after STT. This is deliberately separate from
+# audio inference and can point to any local or cloud-compatible text endpoint.
+text:
+  provider: none
+  base_url: http://localhost:11434
